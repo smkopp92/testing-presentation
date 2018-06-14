@@ -1,0 +1,5 @@
+expect { ReportMailer.milestone_report(product, report, email).deliver_now }
+        .to change { ActionMailer::Base.deliveries.count }.by 1
+
+mail = ActionMailer::Base.deliveries.last
+expect(mail.to).to include(Intake.config.email_groups.milestone_report)

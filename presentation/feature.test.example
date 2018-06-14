@@ -1,0 +1,15 @@
+require 'rails_helper'
+
+RSpec.describe 'User Signs Out', type: :system, js: true do
+  let!(:user) { create :user }
+  let!(:product) { create :product }
+
+  before(:each) { allow_any_instance_of(ApplicationController).to receive(:current_product).and_return(product) }
+
+  it 'should log the user out' do
+    sign_in_and_visit user, root_path
+    find('.icon-profile').click
+    click_on 'Logout'
+    expect(current_path).to eq new_session_path
+  end
+end

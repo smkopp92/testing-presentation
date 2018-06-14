@@ -1,0 +1,6 @@
+def approval_required?
+  return false unless role? || token?
+  return false if approved? || rejected?
+  return roles.any?(&:approval_required?) if role?
+  true
+end

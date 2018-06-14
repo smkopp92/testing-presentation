@@ -1,0 +1,50 @@
+class Product < ApplicationRecord
+  include RolableModel
+
+  has_many :requests, dependent: :destroy
+  has_and_belongs_to_many :actions
+  has_and_belongs_to_many :users
+  belongs_to :product_type
+  alias_attribute :approvers, :users
+
+  validates :title, presence: true, uniqueness: true
+  validates :actions, presence: true
+  validates :owner_email_groups, email: { multiple: true }
+  validate :reporting_product_uniqueness, if: -> { product_type.reporting? }
+
+  scope :by_type, ->(type) { includes(:product_type).where(product_types: { name: type }) }
+
+  def to_param
+    [id, title.parameterize].join('-')
+  end
+
+  def approvers_list
+    approvers.pluck(:ntid).join(',')
+  end
+
+  def approvers_list=(ntids)
+    self.approvers = User.where(ntid: ntids.split(',').map(&:strip))
+  end
+
+  def self.owner_emails
+    Product.pluck(:owner_email_groups).reject(&:nil?)
+           .map { |g| g&.split(',') }.flatten
+           .map { |e| e&.strip&.downcase }.uniq
+  end
+
+  def allowed_actions
+    persisted? ? product_type.actions : Action.by_type('repoless')
+  end
+
+  def product_owner_emails_array
+    owner_email_groups&.split(',')&.map(&:strip)&.map(&:downcase) || []
+  end
+
+  private
+
+  def reporting_product_uniqueness
+    reporting_product = Product.by_type('reporting').first
+    return if reporting_product.blank? || eql?(reporting_product)
+    errors.add(:product_type, 'cannot have multiple reporting projects')
+  end
+end

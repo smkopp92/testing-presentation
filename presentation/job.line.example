@@ -1,0 +1,2 @@
+subject.perform_now
+expect(Request.first.encrypted_credential).to eq "super secret"

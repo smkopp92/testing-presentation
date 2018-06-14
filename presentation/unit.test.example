@@ -1,0 +1,90 @@
+require 'rails_helper'
+
+describe Product do
+  let(:reporting) { ProductType.find_by(name: "reporting") }
+  let!(:product) { create(:product, product_type: reporting) }
+  let!(:repoless_product) { create(:repoless_product) }
+  let(:product_with_users) { create(:product, :with_users) }
+
+  describe '#new' do
+    it { should have_many :requests }
+    it { should have_and_belong_to_many :actions }
+    it { should have_and_belong_to_many :users }
+    it { should belong_to :product_type }
+
+    context 'validations' do
+      it 'is valid with all attributes' do
+        expect(build(:product)).to be_valid
+      end
+      it 'is not valid with a missing title' do
+        product = build(:product, title: nil)
+        expect(product).to_not be_valid
+      end
+      it 'should not be valid with an already taken title' do
+        expect(build(:product, title: product.title)).to_not be_valid
+      end
+      it 'should not be valid with improperly formatted emails' do
+        expect(build(:product, owner_email_groups: "a@b.com, lol")).to_not be_valid
+      end
+      it 'should not be valid with multiple reporting types' do
+        expect(build(:product, product_type: product.product_type)).to_not be_valid
+      end
+    end
+  end
+
+  describe '#approvers' do
+    it 'returns the approver users of the product' do
+      expect(product_with_users.approvers).to eq(
+        product_with_users.users
+      )
+    end
+  end
+
+  describe '#to_param' do
+    it 'returns the id and paramaterized title' do
+      expect(product.to_param).to eq "#{product.id}-#{product.title.parameterize}"
+    end
+  end
+
+  describe '#approvers_list' do
+    it 'returns a list of approver ntids' do
+      expect(product_with_users.approvers_list).to eq product_with_users.approvers.pluck(:ntid).join(',')
+    end
+  end
+
+  describe '#approvers_list=' do
+    it 'sets approvers based on ntids provided' do
+      user_1 = create(:user)
+      user_2 = create(:user)
+      ntids = "#{user_1.ntid},#{user_2.ntid}"
+      product.approvers_list = ntids
+      expect(product.approvers).to eq [user_1, user_2]
+    end
+  end
+
+  describe '.owner_emails' do
+    it 'returns a unique assortment of all user emails' do
+      new_product = create(:product,
+        owner_email_groups: Faker::Internet.email
+      )
+      create(:product,
+        owner_email_groups: product.owner_email_groups
+      )
+
+      expect(Product.owner_emails).to eq [
+        product.owner_email_groups,
+        repoless_product.owner_email_groups,
+        new_product.owner_email_groups
+      ]
+    end
+  end
+
+  describe '#allowed_actions' do
+    it 'returns existing actions if the product exists' do
+      expect(product.allowed_actions).to eq product.product_type.actions
+    end
+    it 'returns repoless action for unpersisted product' do
+      expect(build(:product).allowed_actions).to eq Action.by_type('repoless')
+    end
+  end
+end

@@ -1,0 +1,9 @@
+Rspec.describe 'full_name' do
+  let(:first_name) { "Sebastian" }
+  let(:last_name) { "Kopp" }
+
+  it 'should return the reverse of the word' do
+    result = full_name(first_name, last_name)
+    expect(result).to eq "Sebastian Kopp"
+  end
+end

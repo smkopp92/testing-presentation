@@ -1,0 +1,2 @@
+allow_any_instance_of(Octokit::Client).to receive(:list_milestones)
+  .and_return([{ number: 13, due_on: Time.now, title: "Sprint 23"}])
